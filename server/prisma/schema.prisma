@@ -1,0 +1,303 @@
+// StudyBuddy Prisma Schema
+// 详见 docs/database-schema.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum VerifyStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum BuddyshipStatus {
+  ACTIVE
+  ENDED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum ExamCategory {
+  POSTGRADUATE
+  CERTIFICATE
+  PROFICIENCY
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+// ─── 用户 ────────────────────────────────────
+
+model User {
+  id            String       @id @default(cuid())
+  nickname      String       @db.VarChar(50)
+  avatar        String?      @db.VarChar(500)
+  email         String?      @unique @db.VarChar(255)
+  phone         String?      @unique @db.VarChar(20)
+  phoneCode     String?      @db.VarChar(5)
+  passwordHash  String       @db.VarChar(255)
+  gender        Gender?
+  birthday      DateTime?
+  country       String?      @db.VarChar(100)
+  region        String?      @db.VarChar(100)
+  timezone      String       @default("UTC") @db.VarChar(50)
+  languages     String[]     @default([])
+  bio           String?      @db.VarChar(500)
+
+  verifyStatus  VerifyStatus @default(UNVERIFIED)
+  role          UserRole     @default(USER)
+
+  isActive      Boolean      @default(true)
+  isBanned      Boolean      @default(false)
+  banReason     String?      @db.VarChar(500)
+
+  lastLoginAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  privacySettings Json?
+
+  verifications     Verification[]
+  userExams         UserExam[]
+  sentRequests      BuddyRequest[]    @relation("Requester")
+  receivedRequests  BuddyRequest[]    @relation("Target")
+  buddyshipsA       Buddyship[]       @relation("UserA")
+  buddyshipsB       Buddyship[]       @relation("UserB")
+  sentMessages      Message[]
+  checkins          Checkin[]
+  reviewsGiven      Review[]          @relation("Reviewer")
+  reviewsReceived   Review[]          @relation("Reviewee")
+  devices           UserDevice[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([verifyStatus])
+  @@index([country, region])
+  @@map("users")
+}
+
+model UserDevice {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceToken  String   @db.VarChar(500)
+  platform     String   @db.VarChar(20)
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("user_devices")
+}
+
+model Verification {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idType       String       @db.VarChar(50)
+  idNumber     String       @db.VarChar(100)
+  idCardFront  String       @db.VarChar(500)
+  idCardBack   String?      @db.VarChar(500)
+  selfieImage  String       @db.VarChar(500)
+  name         String       @db.VarChar(100)
+  faceScore    Float?
+  status       VerifyStatus @default(PENDING)
+  rejectReason String?      @db.VarChar(500)
+  reviewedBy   String?
+  submittedAt  DateTime     @default(now())
+  reviewedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@unique([userId])
+  @@index([status])
+  @@map("verifications")
+}
+
+model Exam {
+  id          String       @id @default(cuid())
+  parentId    String?
+  parent      Exam?        @relation("ExamTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Exam[]       @relation("ExamTree")
+  category    ExamCategory
+  name        String       @db.VarChar(100)
+  nameEn      String?      @db.VarChar(200)
+  nameJa      String?      @db.VarChar(200)
+  description String?      @db.Text
+  icon        String?      @db.VarChar(500)
+  sortOrder   Int          @default(0)
+  isActive    Boolean      @default(true)
+  regionNames Json?
+  userExams   UserExam[]
+  buddyRequests BuddyRequest[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([parentId])
+  @@index([category])
+  @@index([isActive])
+  @@map("exams")
+}
+
+model UserExam {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examId       String
+  exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  targetScore  String?  @db.VarChar(50)
+  targetOrg    String?  @db.VarChar(200)
+  major        String?  @db.VarChar(200)
+  dailyHours   Int?
+  preferredTime String? @db.VarChar(50)
+  isPrimary    Boolean  @default(false)
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, examId])
+  @@index([examId])
+  @@index([userId, isPrimary])
+  @@map("user_exams")
+}
+
+model BuddyRequest {
+  id          String        @id @default(cuid())
+  requesterId String
+  requester   User          @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      User          @relation("Target", fields: [targetId], references: [id], onDelete: Cascade)
+  examId      String
+  exam        Exam          @relation(fields: [examId], references: [id])
+  message     String?       @db.VarChar(500)
+  status      RequestStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([requesterId, targetId, examId])
+  @@index([targetId, status])
+  @@index([requesterId])
+  @@map("buddy_requests")
+}
+
+model Buddyship {
+  id        String          @id @default(cuid())
+  userAId   String
+  userA     User            @relation("UserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String
+  userB     User            @relation("UserB", fields: [userBId], references: [id], onDelete: Cascade)
+  examId    String?
+  exam      Exam?           @relation(fields: [examId], references: [id], onDelete: SetNull)
+  status    BuddyshipStatus @default(ACTIVE)
+  startedAt DateTime        @default(now())
+  endedAt   DateTime?
+  createdAt DateTime        @default(now())
+
+  messages Message[]
+
+  @@unique([userAId, userBId, examId])
+  @@index([userAId])
+  @@index([userBId])
+  @@map("buddyships")
+}
+
+model Message {
+  id          String      @id @default(cuid())
+  buddyshipId String
+  buddyship   Buddyship   @relation(fields: [buddyshipId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  type        MessageType @default(TEXT)
+  content     String      @db.Text
+  contentEn   String?     @db.Text
+  mediaUrl    String?     @db.VarChar(500)
+  isRead      Boolean     @default(false)
+  readAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([buddyshipId, createdAt])
+  @@map("messages")
+}
+
+model Checkin {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examId    String?
+  exam      Exam?    @relation(fields: [examId], references: [id], onDelete: SetNull)
+  duration  Int
+  content   String?  @db.VarChar(1000)
+  images    String[] @default([])
+  checkedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId, checkedAt])
+  @@index([userId, createdAt])
+  @@map("checkins")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  reviewerId  String
+  reviewer    User     @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  revieweeId  String
+  reviewee    User     @relation("Reviewee", fields: [revieweeId], references: [id], onDelete: Cascade)
+  buddyshipId String?
+  buddyship   Buddyship? @relation(fields: [buddyshipId], references: [id], onDelete: SetNull)
+  attitude    Int
+  attendance  Int
+  commSkill   Int
+  comment     String?  @db.VarChar(500)
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+
+  @@unique([reviewerId, buddyshipId])
+  @@index([revieweeId])
+  @@map("reviews")
+}
+
+model Report {
+  id           String   @id @default(cuid())
+  reporterId   String
+  reporter     User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User     @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  reason       String   @db.VarChar(500)
+  detail       String?  @db.Text
+  evidence     String[] @default([])
+  status       String   @default("pending") @db.VarChar(20)
+  resolvedBy   String?
+  resolution   String?  @db.VarChar(500)
+  createdAt    DateTime @default(now())
+  resolvedAt   DateTime?
+
+  @@index([targetUserId])
+  @@index([status])
+  @@map("reports")
+}

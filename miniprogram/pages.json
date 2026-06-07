@@ -1,0 +1,111 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^u-(.*)": "@dcloudio/uni-ui/lib/u-$1/u-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "StudyBuddy",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/auth/auth",
+      "style": {
+        "navigationBarTitleText": "",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/verify/verify",
+      "style": {
+        "navigationBarTitleText": "Real-name Verification"
+      }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "Profile",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/exam/exam",
+      "style": {
+        "navigationBarTitleText": "Select Exam"
+      }
+    },
+    {
+      "path": "pages/match/match",
+      "style": {
+        "navigationBarTitleText": "Find Buddy"
+      }
+    },
+    {
+      "path": "pages/match/detail",
+      "style": {
+        "navigationBarTitleText": "Buddy Detail"
+      }
+    },
+    {
+      "path": "pages/chat/chat",
+      "style": {
+        "navigationBarTitleText": "Chat"
+      }
+    },
+    {
+      "path": "pages/chat/rooms",
+      "style": {
+        "navigationBarTitleText": "Messages"
+      }
+    },
+    {
+      "path": "pages/settings/settings",
+      "style": {
+        "navigationBarTitleText": "Settings"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "StudyBuddy",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F5F5F5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#4A90D9",
+    "borderStyle": "black",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png",
+        "text": "Home"
+      },
+      {
+        "pagePath": "pages/match/match",
+        "iconPath": "static/icons/search.png",
+        "selectedIconPath": "static/icons/search-active.png",
+        "text": "Find"
+      },
+      {
+        "pagePath": "pages/chat/rooms",
+        "iconPath": "static/icons/chat.png",
+        "selectedIconPath": "static/icons/chat-active.png",
+        "text": "Chat"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "iconPath": "static/icons/profile.png",
+        "selectedIconPath": "static/icons/profile-active.png",
+        "text": "Me"
+      }
+    ]
+  }
+}

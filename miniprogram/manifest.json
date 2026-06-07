@@ -1,0 +1,32 @@
+{
+  "name": "StudyBuddy",
+  "appid": "__UNI__STUDYBUDDY",
+  "description": "Find study partners worldwide",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "locale": "en",
+  "fallbackLocale": "en",
+  "mp-weixin": {
+    "appid": "wx_studybuddy_appid",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true
+    },
+    "usingComponents": true,
+    "permission": {
+      "scope.userLocation": { "desc": "Used to find nearby study partners" }
+    },
+    "requiredPrivateInfos": ["chooseImage", "chooseVideo"],
+    "plugins": {}
+  },
+  "mp-alipay": {
+    "appid": "alipay_studybuddy_appid"
+  },
+  "h5": {
+    "title": "StudyBuddy",
+    "router": { "mode": "history" }
+  }
+}
