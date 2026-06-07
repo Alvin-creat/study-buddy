@@ -1,61 +1,136 @@
-# StudyBuddy — 跨国学习搭子匹配平台
+# StudyBuddy 📚
 
-帮助来自不同国家和地区的学习者，找到最合适的考试搭子。
+A cross-border study buddy matching platform that connects learners worldwide. Find the perfect study partner for your exams — CFA, IELTS, JLPT, postgraduate entrance exams, and more.
 
-## 功能亮点
+![Design](https://img.shields.io/badge/design-warm%20scholarly-c8a45c) ![License](https://img.shields.io/badge/license-MIT-green) ![Stack](https://img.shields.io/badge/stack-Vue%203%20%2B%20Node.js-blue)
 
-- **全球实名认证** — 支持护照、身份证 OCR 识别 + 人脸比对
-- **多考试类型匹配** — 考研 / 证书考试 / 等级考试，精准匹配
-- **实时多语言聊天** — WebSocket 实时通讯 + 消息自动翻译
-- **智能推荐算法** — 基于目标院校、专业、学习时段、地区多维匹配
-- **7 种语言界面** — 中/英/日/韩/西/法/阿
+## Features
 
-## 支持考试类型
+- **Smart Matching** — Find study buddies by exam type, timezone, and target school
+- **One-Click Connect** — Send a greeting and start studying together instantly
+- **Real-Time Chat** — WebSocket messaging with on-demand translation
+- **Phone Auth** — Verification code login, auto-register on first use
+- **7 Languages** — i18n support for Chinese, English, Japanese, Korean, Spanish, French, Arabic
+- **Multi-Platform** — H5 web app now, WeChat Mini Program ready
 
-| 类别 | 考试 |
-|------|------|
-| 研究生入学 | 全国统考、MBA、MPA、法律硕士、教育硕士... |
-| 职业证书 | CPA、CFA、FRM、ACCA、法考、执业医师、一建... |
-| 语言等级 | CET-4/6、IELTS、TOEFL、JLPT、TOPIK、DELE、DELF... |
-| 其他考试 | 公务员、教师资格证、计算机等级、PMP... |
+## Tech Stack
 
-## 快速开始
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vue 3 + TypeScript + Vite + Pinia + vue-i18n |
+| Backend | Node.js + Express + TypeScript |
+| Database | PostgreSQL 15 + Redis 7 |
+| ORM | Prisma |
+| Real-time | Socket.io (WebSocket) |
+| Auth | JWT + SMS verification code |
+| Deployment | Docker + Nginx |
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL 15+
+- Redis 7+
+- pnpm
+
+### Setup
 
 ```bash
-# 1. 克隆项目
-git clone <repo-url> && cd study-buddy
+# 1. Clone
+git clone https://github.com/YOUR_USERNAME/study-buddy.git
+cd study-buddy
 
-# 2. 启动后端
+# 2. Backend
 cd server
-cp .env.example .env
+cp .env.example .env    # Edit with your DB credentials
 pnpm install
-pnpm db:setup   # 初始化数据库
-pnpm dev
+npx prisma db push      # Create database tables
+pnpm dev                # Starts on :3000
 
-# 3. 启动小程序
+# 3. Frontend
 cd miniprogram
 pnpm install
-pnpm dev:mp-weixin
+pnpm dev                # Starts on :8080
 ```
 
-## 技术栈
+Open http://localhost:8080 in your browser. In dev mode, API calls proxy to the backend automatically.
 
-- **前端**: uni-app 3.x / Vue 3 / TypeScript / Pinia
-- **后端**: Node.js / Express / TypeScript / Prisma ORM
-- **数据库**: PostgreSQL / Redis
-- **文件存储**: S3 兼容存储
-- **实时通信**: Socket.io
-- **认证/实名**: JWT + 第三方 KYC API
-- **部署**: Docker + Nginx
+### Docker
 
-## 项目文档
+```bash
+docker-compose up -d     # PostgreSQL + Redis + App + Nginx
+```
 
-- [需求文档](docs/requirements.md)
-- [架构设计](docs/architecture.md)
-- [API 设计](docs/api-design.md)
-- [数据库设计](docs/database-schema.md)
-- [Claude Code 指南](skills/study-buddy.md)
+## Project Structure
 
-## 许可证
+```
+study-buddy/
+├── miniprogram/          # Frontend (Vue 3 + Vite)
+│   ├── pages/            # Page components
+│   │   ├── match/        # Match discovery + requests
+│   │   ├── chat/         # Chat rooms + messaging
+│   │   ├── auth/         # Phone login
+│   │   └── profile/      # User profile + settings
+│   ├── components/       # Shared components
+│   ├── store/            # Pinia stores
+│   ├── i18n/             # Translation files
+│   ├── utils/            # API client, WebSocket, uni polyfill
+│   └── styles/           # Design tokens (Warm Scholarly theme)
+├── server/               # Backend (Express + Prisma)
+│   └── src/
+│       ├── controllers/  # Route handlers
+│       ├── services/     # Business logic
+│       ├── routes/       # API routes
+│       ├── middleware/    # Auth, validation, rate limiting
+│       └── utils/        # JWT, Redis, hashing
+├── docs/                 # Design docs & specs
+├── docker-compose.yml
+├── nginx.conf
+└── LICENSE
+```
 
-MIT License
+## API Overview
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /auth/send-code` | Send SMS verification code |
+| `POST /auth/login` | Login/register with code |
+| `GET /users/me` | Get current user profile |
+| `PUT /users/me` | Update profile |
+| `GET /match?examType=&keyword=&timezone=` | Browse study buddies |
+| `POST /match/:id/greet` | Send greeting to a user |
+| `GET /match/requests` | View sent/received requests |
+| `PATCH /match/requests/:id` | Accept or reject a request |
+| `GET /match/connections` | List active buddies |
+| `GET /chat/rooms` | List chat rooms |
+| `GET /chat/rooms/:id/messages` | Get message history |
+| `POST /chat/rooms/:id/translate/:msgId` | Translate a message |
+
+## Design
+
+The UI follows a **"Warm Scholarly"** aesthetic — inspired by old university libraries with deep ink blues, warm brass-gold accents, and parchment-like textures. Georgia serif typography throughout.
+
+See [design spec](docs/superpowers/specs/2026-06-07-studybuddy-mvp-design.md) for the full MVP design document.
+
+## Roadmap
+
+- [x] Phone verification code login
+- [x] Browse & filter study buddies
+- [x] Send greetings & manage requests
+- [x] Real-time chat with translation
+- [x] Profile editing
+- [x] i18n (zh-CN, en, ja)
+- [ ] WeChat Mini Program build
+- [ ] Real-name verification (KYC)
+- [x] Dark mode
+- [ ] Community reviews & check-ins
+- [ ] Smart recommendation algorithm
+
+## Contributing
+
+Pull requests welcome! For major changes, please open an issue first to discuss.
+
+## License
+
+[MIT](LICENSE)
