@@ -1,12 +1,12 @@
 <template>
-  <view class="lang-switcher" @click="cycleLang">
-    <text class="lang-text">{{ currentFlag }}</text>
-  </view>
+  <div class="lang-switcher" @click="cycleLang">
+    <span class="lang-text">{{ currentFlag }}</span>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { useI18n } from '../i18n';
 import { useUserStore } from '../store/user';
 
 const { locale } = useI18n();
@@ -27,20 +27,21 @@ const currentFlag = computed(() => flags[locale.value]?.flag || 'EN');
 function cycleLang() {
   const next = flags[locale.value]?.next || 'en';
   locale.value = next;
-  uni.setStorageSync('locale', next);
+  localStorage.setItem('locale', next);
   userStore.updateSettings({ language: next });
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .lang-switcher {
-  width: 56rpx;
-  height: 56rpx;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #F0F0F0;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
-.lang-text { font-size: 22rpx; font-weight: 600; color: #666; }
+.lang-text { font-size: 13px; font-weight: 600; color: #666; }
 </style>

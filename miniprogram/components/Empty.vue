@@ -1,17 +1,13 @@
 <template>
-  <view class="empty-state">
-    <text class="empty-state__icon">{{ icon }}</text>
-    <text class="empty-state__text">{{ text }}</text>
+  <div class="empty-state">
+    <span class="empty-state__icon">{{ icon }}</span>
+    <span class="empty-state__text">{{ text }}</span>
     <slot />
-  </view>
+  </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  text?: string
-  icon?: string
-}>();
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   text?: string
   icon?: string
 }>(), {
@@ -19,3 +15,16 @@ const props = withDefaults(defineProps<{
   text: 'No data',
 });
 </script>
+
+<style scoped>
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #999;
+}
+.empty-state__icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state__text { font-size: 14px; }
+</style>

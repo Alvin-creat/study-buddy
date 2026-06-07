@@ -1,16 +1,17 @@
 // ─── uni-app API Polyfill for Browser ────
 // Maps uni.* APIs to browser equivalents so pages work in both environments
 
-const toastTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+import { ref } from 'vue';
+
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 const toastMsg = ref('');
 const toastVisible = ref(false);
-import { ref } from 'vue';
 
 function showToast(opts: { title: string; icon?: string; duration?: number }) {
   toastMsg.value = opts.title;
   toastVisible.value = true;
-  if (toastTimer.value) clearTimeout(toastTimer.value);
-  toastTimer.value = setTimeout(() => { toastVisible.value = false; }, opts.duration || 2000);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastVisible.value = false; }, opts.duration || 2000);
 }
 
 export const toastState = { toastMsg, toastVisible };
@@ -71,7 +72,6 @@ export const uni = {
 
   uploadFile(opts: { url: string; filePath: string; name: string; header?: Record<string,string>; success?: (res: any) => void; fail?: (err: any) => void }) {
     const formData = new FormData();
-    // filePath is a blob URL or data URL in browser context
     fetch(opts.filePath)
       .then(r => r.blob())
       .then(blob => {
@@ -96,7 +96,6 @@ export const uni = {
   // ─── Navigation ────────────────────────
   navigateTo(opts: { url: string }) {
     const path = opts.url.replace(/^\//, '');
-    // Map uni page paths to router paths
     const routeMap: Record<string, string> = {
       'pages/auth/auth': '/auth',
       'pages/verify/verify': '/verify',
@@ -108,7 +107,6 @@ export const uni = {
       'pages/match/match': '/match',
     };
     const r = routeMap[path] || `/${path}`;
-    // Extract query params if present
     const [base, query] = r.split('?');
     window.location.hash = '#' + base + (query ? `?${query}` : '');
   },
@@ -150,5 +148,4 @@ export const uni = {
   },
 };
 
-// Globally register for pages that import from '@dcloudio/uni-app'
 (globalThis as any).uni = uni;

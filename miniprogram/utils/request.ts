@@ -1,6 +1,7 @@
 // ─── HTTP Request Wrapper ─────────────────
 
-const BASE_URL = 'https://api.studybuddy.app/api/v1';
+// Use relative path so Vite proxy forwards to backend
+const BASE_URL = '/api/v1';
 
 interface RequestOptions {
   url: string;
