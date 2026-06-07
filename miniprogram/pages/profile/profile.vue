@@ -1,123 +1,130 @@
 <template>
-  <view class="page">
-    <!-- Header Background -->
-    <view class="profile-bg"></view>
+  <div class="profile-page">
+    <!-- Hero -->
+    <div class="profile-hero">
+      <div class="hero-bg"></div>
+      <div class="hero-content">
+        <div class="profile-avatar-wrap" @click="changeAvatar">
+          <div class="profile-avatar">
+            <img :src="user?.avatar || '/static/default-avatar.png'" alt="" />
+          </div>
+          <div class="avatar-frame"></div>
+        </div>
+        <h2 class="profile-name">{{ user?.nickname || 'Scholar' }}</h2>
+        <p class="profile-bio" v-if="user?.examName && !editing">
+          {{ user.examName }}<span v-if="user?.targetSchool"> · {{ user.targetSchool }}</span>
+        </p>
+        <div class="hero-meta" v-if="!editing">
+          <span class="meta-badge" v-if="user?.timezone">{{ user.timezone }}</span>
+          <span class="meta-badge" v-if="user?.studyTime">{{ user.studyTime }}</span>
+        </div>
+        <button class="edit-toggle" @click="toggleEdit">
+          {{ editing ? 'Cancel' : 'Edit Profile' }}
+        </button>
+      </div>
+    </div>
 
-    <!-- Profile Info -->
-    <view class="profile-info safe-top">
-      <view class="avatar avatar-xl" @click="changeAvatar">
-        <image :src="user?.avatar || '/static/default-avatar.png'" mode="aspectFill" />
-      </view>
-      <text class="profile-name text-xl text-bold mt-16">{{ user?.nickname || '--' }}</text>
-      <view class="flex gap-8 mt-8">
-        <text class="text-secondary">{{ user?.country || '' }}</text>
-        <text class="tag" :class="verifyClass">{{ verifyLabel }}</text>
-      </view>
-      <text class="text-sm text-secondary mt-8" v-if="user?.bio">{{ user.bio }}</text>
-    </view>
+    <!-- Edit Form -->
+    <div class="edit-form" v-if="editing">
+      <div class="form-card">
+        <div class="field">
+          <label class="field-label">Nickname</label>
+          <input v-model="form.nickname" class="field-input" placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label class="field-label">Exam Type</label>
+          <div class="select-wrap">
+            <select v-model="form.examType" class="field-input">
+              <option value="">Select...</option>
+              <option value="postgraduate">🎓 Postgraduate</option>
+              <option value="certificate">📜 Certificate</option>
+              <option value="language">🗣 Language</option>
+              <option value="other">📋 Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Exam Name</label>
+          <input v-model="form.examName" class="field-input" placeholder="e.g. CFA Level II" />
+        </div>
+        <div class="field">
+          <label class="field-label">Target School</label>
+          <input v-model="form.targetSchool" class="field-input" placeholder="e.g. NYU" />
+        </div>
+        <div class="field-row">
+          <div class="field half">
+            <label class="field-label">Timezone</label>
+            <input v-model="form.timezone" class="field-input" placeholder="e.g. EST" />
+          </div>
+          <div class="field half">
+            <label class="field-label">Study Time</label>
+            <div class="select-wrap">
+              <select v-model="form.studyTime" class="field-input">
+                <option value="">Select...</option>
+                <option value="morning">Morning</option>
+                <option value="afternoon">Afternoon</option>
+                <option value="evening">Evening</option>
+                <option value="flexible">Flexible</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Bio</label>
+          <textarea v-model="form.bio" class="field-input bio-input" placeholder="A short intro..." rows="2"></textarea>
+        </div>
+        <button class="save-btn" :disabled="saving" @click="saveProfile">
+          {{ saving ? 'Saving...' : 'Save Changes' }}
+        </button>
+      </div>
+    </div>
 
-    <!-- Stats Row -->
-    <view class="stats-row card">
-      <view class="stat-item" @click="goCheckin">
-        <text class="stat-value text-lg text-bold">{{ streakDays }}</text>
-        <text class="stat-label text-sm text-secondary">{{ $t('profile.streak') }}</text>
-      </view>
-      <view class="stat-divider"></view>
-      <view class="stat-item">
-        <text class="stat-value text-lg text-bold">{{ user?.userExams?.length || 0 }}</text>
-        <text class="stat-label text-sm text-secondary">{{ $t('profile.exams') }}</text>
-      </view>
-      <view class="stat-divider"></view>
-      <view class="stat-item" @click="goReviews">
-        <text class="stat-value text-lg text-bold">{{ avgRating }}</text>
-        <text class="stat-label text-sm text-secondary">{{ $t('profile.rating') }}</text>
-      </view>
-    </view>
-
-    <!-- My Exams -->
-    <view class="section">
-      <view class="section-header">
-        <text class="section-title">{{ $t('profile.myExams') }}</text>
-        <text class="text-primary text-sm" @click="goAddExam">+ {{ $t('common.add') }}</text>
-      </view>
-      <view v-if="user?.userExams?.length > 0" class="exam-list">
-        <view
-          v-for="ue in user.userExams"
-          :key="ue.id"
-          class="exam-item card"
-        >
-          <view class="flex-between">
-            <view>
-              <text class="text-bold">{{ ue.exam?.name }}</text>
-              <view class="flex gap-8 mt-8" v-if="ue.targetOrg || ue.major">
-                <text class="tag" v-if="ue.targetOrg">{{ ue.targetOrg }}</text>
-                <text class="tag" v-if="ue.major">{{ ue.major }}</text>
-              </view>
-            </view>
-            <view class="text-right">
-              <text class="text-sm text-hint" v-if="ue.targetScore">{{ $t('profile.targetScore') }}: {{ ue.targetScore }}</text>
-              <text class="text-sm text-hint mt-4" v-if="ue.dailyHours">{{ ue.dailyHours }}h/{{ $t('common.day') }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      <Empty v-else :text="$t('profile.noExams')" />
-    </view>
-
-    <!-- Menu List -->
-    <view class="menu-list card">
-      <view class="menu-item" @click="goVerify">
-        <text>{{ $t('verify.title') }}</text>
-        <text class="text-hint">{{ verifyMenuLabel }} →</text>
-      </view>
-      <view class="divider"></view>
-      <view class="menu-item" @click="goMyBuddies">
-        <text>{{ $t('profile.myBuddies') }}</text>
-        <text class="text-hint">→</text>
-      </view>
-      <view class="divider"></view>
-      <view class="menu-item" @click="goRequests">
-        <text>{{ $t('profile.requests') }}</text>
-        <view class="flex gap-8">
-          <text class="badge" v-if="pendingCount > 0">{{ pendingCount }}</text>
-          <text class="text-hint">→</text>
-        </view>
-      </view>
-      <view class="divider"></view>
-      <view class="menu-item" @click="goSettings">
-        <text>{{ $t('settings.title') }}</text>
-        <text class="text-hint">→</text>
-      </view>
-    </view>
+    <!-- Menu -->
+    <div class="menu-section">
+      <button class="menu-item" @click="goRequests">
+        <span class="menu-icon">📬</span>
+        <span class="menu-label">{{ $t('profile.requests') }}</span>
+        <span class="badge-count" v-if="pendingCount > 0">{{ pendingCount }}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+      <button class="menu-item" @click="goSettings">
+        <span class="menu-icon">⚙️</span>
+        <span class="menu-label">{{ $t('settings.title') }}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
 
     <!-- Logout -->
-    <view class="logout-section">
-      <button class="btn btn-ghost btn-block" @click="handleLogout">
-        {{ $t('auth.logout') }}
+    <div class="logout-section">
+      <button class="logout-btn" @click="handleLogout">
+        <span>{{ $t('auth.logout') }}</span>
       </button>
-    </view>
-  </view>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '../../store/user';
-import { checkinApi, matchApi, reviewApi } from '../../api';
+import { userApi, matchApi } from '../../api';
 
 const { t } = useI18n();
 const userStore = useUserStore();
-const { user, isVerified } = userStore;
+const { user } = userStore;
 
-const streakDays = ref(0);
-const avgRating = ref('--');
 const pendingCount = ref(0);
+const editing = ref(false);
+const saving = ref(false);
 
-const verifyClass = computed(() => {
-  if (!user.value) return 'tag-danger';
-  if (user.value.verifyStatus === 'VERIFIED') return 'tag-success';
-  if (user.value.verifyStatus === 'PENDING') return 'tag-warning';
-  return 'tag-danger';
+const form = reactive({
+  nickname: '',
+  examType: '',
+  examName: '',
+  targetSchool: '',
+  timezone: '',
+  studyTime: '',
+  bio: '',
 });
 
 const verifyLabel = computed(() => {
@@ -127,38 +134,45 @@ const verifyLabel = computed(() => {
   return t('verify.unverified');
 });
 
-const verifyMenuLabel = computed(() => {
-  if (user.value?.verifyStatus === 'VERIFIED') return t('verify.viewDetail');
-  return t('verify.goVerify');
-});
-
 onMounted(async () => {
   try {
-    const [streak, requests, reviews] = await Promise.all([
-      checkinApi.getStreak(),
-      matchApi.receivedRequests(),
-      reviewApi.getUserReviews(userStore.userId!),
-    ]);
-    streakDays.value = (streak as any)?.streak || 0;
-
-    const reqs = requests as any[];
-    pendingCount.value = reqs?.filter((r: any) => r.status === 'PENDING').length || 0;
-
-    const revs = reviews as any[];
-    if (revs && revs.length > 0) {
-      const avg = revs.reduce((s: number, r: any) => s + (r.attitude + r.attendance + r.commSkill) / 3, 0) / revs.length;
-      avgRating.value = avg.toFixed(1);
-    }
-  } catch { /* ignore */ }
+    const reqs: any = await matchApi.getRequests();
+    pendingCount.value = reqs?.received?.filter((r: any) => r.status === 'PENDING').length || 0;
+  } catch { /* */ }
 });
+
+function toggleEdit() {
+  if (!editing.value) {
+    // Populate form from user data
+    form.nickname = user.value?.nickname || '';
+    form.examType = user.value?.examType || '';
+    form.examName = user.value?.examName || '';
+    form.targetSchool = user.value?.targetSchool || '';
+    form.timezone = user.value?.timezone || '';
+    form.studyTime = user.value?.studyTime || '';
+    form.bio = user.value?.bio || '';
+  }
+  editing.value = !editing.value;
+}
+
+async function saveProfile() {
+  saving.value = true;
+  try {
+    const updated: any = await userApi.updateProfile({ ...form });
+    userStore.user = { ...user.value, ...updated };
+    editing.value = false;
+    uni.showToast({ title: 'Profile updated', icon: 'success' });
+  } catch (err: any) {
+    uni.showToast({ title: err.message || 'Error', icon: 'none' });
+  } finally {
+    saving.value = false;
+  }
+}
 
 function changeAvatar() {
   uni.chooseImage({
     count: 1,
-    success: (res) => {
-      // Upload and update avatar
-      uni.showToast({ title: 'TODO: upload', icon: 'none' });
-    },
+    success: () => { uni.showToast({ title: 'Upload coming soon', icon: 'none' }); },
   });
 }
 
@@ -168,43 +182,222 @@ function handleLogout() {
     success: (res) => {
       if (res.confirm) {
         userStore.logout();
-        uni.reLaunch({ url: '/pages/index/index' });
+        uni.reLaunch({ url: '/pages/match/match' });
       }
     },
   });
 }
 
-function goVerify() { uni.navigateTo({ url: '/pages/verify/verify' }); }
-function goAddExam() { uni.navigateTo({ url: '/pages/exam/exam' }); }
+function goRequests() { uni.navigateTo({ url: '/pages/match/requests' }); }
 function goSettings() { uni.navigateTo({ url: '/pages/settings/settings' }); }
-function goCheckin() { /* TODO */ }
-function goReviews() { /* TODO */ }
-function goMyBuddies() { /* TODO */ }
-function goRequests() { /* TODO */ }
 </script>
 
 <style lang="scss" scoped>
-.profile-bg {
-  height: 280rpx;
-  background: linear-gradient(135deg, #4A90D9, #357ABD);
+@import '../../styles/global.scss';
+
+.profile-page {
+  min-height: 100vh;
+  background: $bg;
+  @include paper-texture;
 }
-.profile-info {
-  text-align: center;
-  margin-top: -80rpx;
-  padding: 0 32rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+
+/* Hero */
+.profile-hero {
+  position: relative;
+  padding-bottom: 24px;
 }
-.profile-name { color: #1A1A1A; }
-.stats-row { display: flex; align-items: center; justify-content: space-around; padding: 32rpx; }
-.stat-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
-.stat-divider { width: 2rpx; height: 60rpx; background: #E8E8E8; }
-.section { padding: 24rpx 32rpx; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
-.section-title { font-size: 30rpx; font-weight: 600; }
-.exam-item { margin: 0; margin-bottom: 12rpx; }
-.menu-list { margin: 16rpx 32rpx; }
-.menu-item { display: flex; justify-content: space-between; align-items: center; padding: 28rpx 0; font-size: 30rpx; }
-.logout-section { padding: 48rpx 32rpx; }
+
+.hero-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 180px;
+  background: linear-gradient(170deg, $ink-deep 0%, lighten($ink-deep, 10%) 100%);
+  border-radius: 0 0 40px 40px;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 30% 70%, rgba($gold-warm, 0.08) 0%, transparent 60%),
+      radial-gradient(circle at 80% 20%, rgba($gold-light, 0.05) 0%, transparent 50%);
+  }
+}
+
+.hero-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 40px 24px 0; text-align: center;
+}
+
+.profile-avatar-wrap {
+  position: relative; margin-bottom: 12px; cursor: pointer;
+}
+
+.profile-avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  overflow: hidden; background: $dust; position: relative; z-index: 1;
+  border: 3px solid rgba($ivory, 0.9);
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.avatar-frame {
+  position: absolute; inset: -4px; border-radius: 50%;
+  border: 1.5px solid rgba($gold-warm, 0.4);
+}
+
+.profile-name {
+  font-family: 'Georgia', serif;
+  font-size: 20px; font-weight: 700; color: $ivory;
+  letter-spacing: -0.3px; margin-bottom: 2px;
+}
+
+.profile-bio {
+  font-size: 12px; color: rgba($ivory, 0.7);
+  font-style: italic; margin-bottom: 10px;
+}
+
+.hero-meta {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+}
+
+.meta-badge {
+  font-size: 10px; font-weight: 500;
+  color: rgba($ivory, 0.8);
+  background: rgba($ivory, 0.1);
+  padding: 3px 10px; border-radius: 10px;
+  border: 1px solid rgba($ivory, 0.12);
+  text-transform: capitalize;
+}
+
+.edit-toggle {
+  margin-top: 14px;
+  padding: 6px 18px;
+  background: rgba($ivory, 0.12);
+  color: rgba($ivory, 0.8);
+  border: 1px solid rgba($ivory, 0.15);
+  border-radius: 16px;
+  font-size: 11px; font-weight: 500;
+  cursor: pointer; letter-spacing: 0.3px;
+  transition: all 0.2s;
+
+  &:hover { background: rgba($ivory, 0.2); color: $ivory; }
+}
+
+/* Edit Form */
+.edit-form {
+  padding: 16px 20px;
+}
+
+.form-card {
+  background: $ivory;
+  border-radius: $radius-lg;
+  padding: 24px;
+  border: 1px solid rgba($clay, 0.15);
+  @include ink-bleed;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field-row {
+  display: flex; gap: 12px;
+}
+
+.field.half { flex: 1; }
+
+.field-label {
+  display: block;
+  font-size: 11px; font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.field-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid $border;
+  border-radius: $radius;
+  font-size: 14px;
+  color: $text-primary;
+  background: $bg-card;
+  transition: border-color 0.2s;
+
+  &:focus { outline: none; border-color: $gold-warm; }
+  &::placeholder { color: $text-hint; font-style: italic; }
+}
+
+select.field-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b7355' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.bio-input {
+  height: auto; padding: 10px 14px; resize: vertical;
+}
+
+.save-btn {
+  width: 100%; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: $ink-deep; color: $ivory;
+  border: none; border-radius: $radius;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.3px;
+  margin-top: 4px; transition: all 0.2s;
+
+  &:hover { background: lighten($ink-deep, 8%); }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+/* Menu */
+.menu-section {
+  margin: 8px 20px 0;
+  background: $ivory; border-radius: $radius-lg;
+  border: 1px solid rgba($clay, 0.15); overflow: hidden;
+  @include ink-bleed;
+}
+
+.menu-item {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 16px 20px;
+  border: none; background: transparent;
+  font-size: 14px; color: $text-primary; cursor: pointer;
+  text-align: left; transition: background 0.15s;
+
+  &:not(:last-child) { border-bottom: 1px solid rgba($clay, 0.1); }
+  &:hover { background: rgba($clay, 0.06); }
+}
+
+.menu-icon { font-size: 18px; width: 24px; text-align: center; }
+.menu-label { flex: 1; font-weight: 500; }
+
+.badge-count {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px;
+  background: $ember; color: #fff;
+  font-size: 10px; font-weight: 600;
+  border-radius: 10px; padding: 0 6px;
+}
+
+.menu-item svg { color: $text-hint; flex-shrink: 0; }
+
+/* Logout */
+.logout-section { padding: 20px 20px 40px; }
+
+.logout-btn {
+  width: 100%; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; color: $text-secondary;
+  border: 1px solid $border; border-radius: $radius;
+  font-size: 14px; cursor: pointer; transition: all 0.2s;
+
+  &:hover { border-color: rgba($ember, 0.3); color: $ember; }
+}
 </style>

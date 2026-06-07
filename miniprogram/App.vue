@@ -3,8 +3,6 @@ import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from './i18n';
 import { useUserStore } from './store/user';
-import { toastState } from './utils/uni-polyfill';
-import { uni } from './utils/uni-polyfill';
 
 const router = useRouter();
 const route = useRoute();
@@ -12,15 +10,14 @@ const { locale } = useI18n();
 const userStore = useUserStore();
 
 const tabs = [
-  { path: '/', label: 'Home', icon: '🏠' },
+  { path: '/', label: 'Home', icon: '📖' },
   { path: '/match', label: 'Find', icon: '🔍' },
-  { path: '/rooms', label: 'Chat', icon: '💬' },
-  { path: '/profile', label: 'Me', icon: '👤' },
+  { path: '/rooms', label: 'Chat', icon: '✉️' },
+  { path: '/profile', label: 'Me', icon: '⚜️' },
 ];
 
 const showTabBar = computed(() => {
-  const routesWithTab = ['/', '/match', '/rooms', '/profile'];
-  return routesWithTab.includes(route.path);
+  return ['/', '/match', '/rooms', '/profile'].includes(route.path);
 });
 
 const currentTab = computed(() => {
@@ -32,22 +29,25 @@ function switchTab(path: string) {
   router.push(path);
 }
 
-// Detect system language on mount
-const sysLang = navigator.language;
+// Detect language
 const langMap: Record<string, string> = {
   'zh-CN': 'zh-CN', 'zh': 'zh-CN',
   'ja': 'ja', 'ko': 'ko', 'es': 'es', 'fr': 'fr', 'ar': 'ar',
 };
-const detected = langMap[sysLang] || 'en';
+const detected = langMap[navigator.language] || 'en';
 locale.value = detected;
 userStore.updateSettings({ language: detected });
 </script>
 
 <template>
-  <div class="app-container">
-    <div class="page-content" :class="{ 'has-tabbar': showTabBar }">
-      <router-view />
-    </div>
+  <div class="app-shell">
+    <main class="app-main" :class="{ 'has-tabs': showTabBar }">
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
 
     <!-- Tab Bar -->
     <nav v-if="showTabBar" class="tab-bar">
@@ -60,57 +60,48 @@ userStore.updateSettings({ language: detected });
       >
         <span class="tab-icon">{{ tab.icon }}</span>
         <span class="tab-label">{{ tab.label }}</span>
+        <span v-if="idx === currentTab" class="tab-indicator"></span>
       </div>
     </nav>
-
-    <!-- Toast -->
-    <Teleport to="body">
-      <div v-if="toastState.toastVisible.value" class="global-toast">
-        {{ toastState.toastMsg.value }}
-      </div>
-    </Teleport>
   </div>
 </template>
 
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; overflow: hidden; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', sans-serif;
-  font-size: 14px;
-  color: #1A1A1A;
-  background: #F5F5F5;
-}
+<style lang="scss">
+@import './styles/global.scss';
 
-.app-container {
-  height: 100vh;
+.app-shell {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: $bg;
+  @include paper-texture;
 }
 
-.page-content {
+.app-main {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-.page-content.has-tabbar {
-  padding-bottom: 60px;
+
+  &.has-tabs {
+    padding-bottom: 72px;
+  }
 }
 
 /* Tab Bar */
 .tab-bar {
-  display: flex;
-  height: 60px;
-  background: #fff;
-  border-top: 1px solid #E8E8E8;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  height: 64px;
+  background: rgba($ivory, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid $border;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
 .tab-item {
   flex: 1;
   display: flex;
@@ -119,34 +110,53 @@ body {
   justify-content: center;
   gap: 2px;
   cursor: pointer;
-  color: #999;
-  transition: color 0.2s;
-}
-.tab-item.active { color: #4A90D9; }
-.tab-icon { font-size: 22px; }
-.tab-label { font-size: 10px; }
+  position: relative;
+  color: $text-hint;
+  transition: color 0.3s;
 
-/* Global Toast */
-.global-toast {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.8);
-  color: #fff;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  z-index: 9999;
-  pointer-events: none;
-  animation: toast-in 0.2s ease;
+  &.active {
+    color: $ink-deep;
+  }
 }
-@keyframes toast-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+.tab-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.tab-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.tab-indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: $gold-warm;
+  border-radius: 0 0 2px 2px;
+}
+
+/* Page Transitions */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: $clay; border-radius: 2px; }
 </style>

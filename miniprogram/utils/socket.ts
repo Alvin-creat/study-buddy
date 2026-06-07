@@ -2,7 +2,8 @@
 
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = 'wss://api.studybuddy.app';
+// Use current host for WebSocket (Vite proxy handles /ws)
+const SOCKET_URL = window.location.origin;
 
 let socket: Socket | null = null;
 

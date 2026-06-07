@@ -47,6 +47,10 @@ const routes = [
     path: '/settings',
     component: () => import('../pages/settings/settings.vue'),
   },
+  {
+    path: '/requests',
+    component: () => import('../pages/match/requests.vue'),
+  },
 ];
 
 export const router = createRouter({

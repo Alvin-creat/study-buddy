@@ -105,6 +105,7 @@ export const uni = {
       'pages/chat/rooms': '/rooms',
       'pages/match/detail': '/match-detail',
       'pages/match/match': '/match',
+      'pages/match/requests': '/requests',
     };
     const r = routeMap[path] || `/${path}`;
     const [base, query] = r.split('?');
