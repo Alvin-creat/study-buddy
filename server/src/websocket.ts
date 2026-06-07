@@ -129,7 +129,7 @@ export function setupWebSocket(
       });
 
       // Notify sender
-      messageIds.forEach((msgId) => {
+      messageIds.forEach((msgId: string) => {
         io.to(`room:${buddyshipId}`).emit('chat:read', {
           messageId: msgId,
           readBy: userId,
