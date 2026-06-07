@@ -16,6 +16,10 @@ const updateProfileSchema = z.object({
   region: z.string().optional(),
   timezone: z.string().optional(),
   languages: z.array(z.string()).optional(),
+  examType: z.string().optional(),
+  examName: z.string().optional(),
+  targetSchool: z.string().optional(),
+  studyTime: z.string().optional(),
   privacySettings: z.object({
     showExam: z.boolean().optional(),
     showCheckin: z.boolean().optional(),

@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth';
 
-export async function register(req: Request, res: Response, next: NextFunction) {
+export async function sendCode(req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await authService.register(req.body);
-    res.status(201).json({ code: 0, message: 'ok', data: result });
+    const result = await authService.sendVerificationCode(req.body);
+    res.json({ code: 0, message: 'Verification code sent', data: result });
   } catch (err) {
     next(err);
   }
@@ -27,15 +27,6 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     }
     const result = await authService.refreshTokens(refreshToken);
     res.json({ code: 0, message: 'ok', data: result });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function sendCode(req: Request, res: Response, next: NextFunction) {
-  try {
-    await authService.sendVerificationCode(req.body);
-    res.json({ code: 0, message: 'Verification code sent' });
   } catch (err) {
     next(err);
   }

@@ -5,7 +5,6 @@ import { request } from '../utils/request';
 // ─── Auth ──────────────────────────────────
 
 export const authApi = {
-  register: (data: any) => request('/auth/register', { method: 'POST', data, skipAuth: true }),
   login: (data: any) => request('/auth/login', { method: 'POST', data, skipAuth: true }),
   refresh: (refreshToken: string) => request('/auth/refresh', { method: 'POST', data: { refreshToken }, skipAuth: true }),
   sendCode: (data: any) => request('/auth/send-code', { method: 'POST', data, skipAuth: true }),
@@ -43,13 +42,11 @@ export const examApi = {
 // ─── Match ─────────────────────────────────
 
 export const matchApi = {
-  recommend: (examId: string, page = 1) => request(`/match/recommend?examId=${examId}&page=${page}`),
-  search: (params: any) => request('/match/search', { method: 'GET', data: params } as any),
-  sendRequest: (data: any) => request('/match/request', { method: 'POST', data }),
-  receivedRequests: () => request('/match/requests/received'),
-  sentRequests: () => request('/match/requests/sent'),
-  acceptRequest: (id: string) => request(`/match/requests/${id}/accept`, { method: 'POST' }),
-  rejectRequest: (id: string) => request(`/match/requests/${id}/reject`, { method: 'POST' }),
+  search: (params: any) => request('/match', { method: 'GET', data: params } as any),
+  greet: (userId: string, message?: string) => request(`/match/${userId}/greet`, { method: 'POST', data: { message } }),
+  getRequests: () => request('/match/requests'),
+  respondRequest: (id: string, status: 'accepted' | 'rejected') => request(`/match/requests/${id}`, { method: 'PATCH', data: { status } }),
+  getConnections: () => request('/match/connections'),
 };
 
 // ─── Buddies ───────────────────────────────
@@ -66,6 +63,8 @@ export const chatApi = {
   getRooms: () => request('/chat/rooms'),
   getMessages: (buddyshipId: string, before?: string) =>
     request(`/chat/rooms/${buddyshipId}/messages${before ? `?before=${before}` : ''}`),
+  translate: (buddyshipId: string, messageId: string, lang = 'en') =>
+    request(`/chat/rooms/${buddyshipId}/translate/${messageId}?lang=${lang}`, { method: 'POST' }),
 };
 
 // ─── Checkin ───────────────────────────────

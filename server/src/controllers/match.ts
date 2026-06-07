@@ -1,73 +1,60 @@
 import { Request, Response, NextFunction } from 'express';
 import * as matchService from '../services/match';
 
-export async function recommend(req: Request, res: Response, next: NextFunction) {
+export async function listMatches(req: Request, res: Response, next: NextFunction) {
   try {
-    const { examId, page = '1', pageSize = '20' } = req.query;
-    if (!examId || typeof examId !== 'string') {
-      return res.status(400).json({ code: 10001, message: 'examId required' });
+    const { examType, keyword, timezone, page, limit } = req.query;
+    const result = await matchService.listMatches(req.userId!, {
+      examType: examType as string | undefined,
+      keyword: keyword as string | undefined,
+      timezone: timezone as string | undefined,
+      page: page ? parseInt(page as string, 10) : 1,
+      limit: limit ? parseInt(limit as string, 10) : 20,
+    });
+    res.json({ code: 0, message: 'ok', ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function greet(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { message } = req.body || {};
+    const result = await matchService.sendRequest(req.userId!, req.params.userId, message);
+    res.status(201).json({ code: 0, message: result.matched ? 'Matched!' : 'Request sent', data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getRequests(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await matchService.getRequests(req.userId!);
+    res.json({ code: 0, message: 'ok', data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleRequest(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { status } = req.body;
+    if (status === 'accepted') {
+      const result = await matchService.acceptRequest(req.userId!, req.params.id);
+      return res.json({ code: 0, message: 'ok', data: result });
+    } else {
+      await matchService.rejectRequest(req.userId!, req.params.id);
+      return res.json({ code: 0, message: 'Request rejected' });
     }
-    const result = await matchService.recommend(
-      req.userId!,
-      examId,
-      parseInt(page as string, 10),
-      parseInt(pageSize as string, 10)
-    );
-    res.json({ code: 0, message: 'ok', ...result });
   } catch (err) {
     next(err);
   }
 }
 
-export async function search(req: Request, res: Response, next: NextFunction) {
+export async function getConnections(req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await matchService.search(req.userId!, req.query as any);
-    res.json({ code: 0, message: 'ok', ...result });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function sendRequest(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await matchService.sendRequest(req.userId!, req.body);
-    res.status(201).json({ code: 0, message: 'ok', data: result });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function receivedRequests(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await matchService.getRequests(req.userId!, 'received');
+    const result = await matchService.getConnections(req.userId!);
     res.json({ code: 0, message: 'ok', data: result });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function sentRequests(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await matchService.getRequests(req.userId!, 'sent');
-    res.json({ code: 0, message: 'ok', data: result });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function acceptRequest(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await matchService.acceptRequest(req.userId!, req.params.id);
-    res.json({ code: 0, message: 'ok', data: result });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function rejectRequest(req: Request, res: Response, next: NextFunction) {
-  try {
-    await matchService.rejectRequest(req.userId!, req.params.id);
-    res.json({ code: 0, message: 'Request rejected' });
   } catch (err) {
     next(err);
   }

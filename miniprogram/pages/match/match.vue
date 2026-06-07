@@ -1,167 +1,231 @@
 <template>
   <view class="page">
-    <!-- Filter Bar -->
-    <view class="filter-bar">
-      <picker :range="myExamLabels" :value="selectedExamIndex" @change="onExamChange">
-        <view class="filter-chip">
-          <text>{{ selectedExamLabel || $t('match.selectExam') }}</text>
-          <text class="text-hint">▾</text>
-        </view>
-      </picker>
-      <picker :range="countryOptions" :value="countryIndex" @change="onCountryChange">
-        <view class="filter-chip">
-          <text>{{ countryOptions[countryIndex] || $t('match.country') }}</text>
-          <text class="text-hint">▾</text>
-        </view>
-      </picker>
-      <picker :range="timeOptions" :value="timeIndex" @change="onTimeChange">
-        <view class="filter-chip">
-          <text>{{ timeOptions[timeIndex] || $t('match.time') }}</text>
-          <text class="text-hint">▾</text>
-        </view>
-      </picker>
-    </view>
-
-    <!-- Tab: Recommend / Search -->
-    <view class="mode-tabs">
-      <view :class="['mode-tab', { active: mode === 'recommend' }]" @click="mode = 'recommend'">
-        {{ $t('match.recommend') }}
-      </view>
-      <view :class="['mode-tab', { active: mode === 'search' }]" @click="mode = 'search'">
-        {{ $t('match.search') }}
+    <!-- Search Bar -->
+    <view class="search-bar safe-top">
+      <view class="search-input">
+        <text class="search-icon">🔍</text>
+        <input
+          v-model="keyword"
+          class="search-field"
+          :placeholder="$t('home.searchPlaceholder')"
+          @confirm="onSearch"
+        />
       </view>
     </view>
 
-    <!-- Not Verified -->
-    <view class="verify-required" v-if="!isVerified">
-      <Empty :text="$t('match.verifyRequired')" />
-      <button class="btn btn-primary mt-24" @click="goVerify">{{ $t('verify.goVerify') }}</button>
-    </view>
+    <!-- Exam Type Tabs -->
+    <scroll-view scroll-x class="exam-tabs">
+      <view
+        v-for="tab in examTabs"
+        :key="tab.value"
+        :class="['exam-tab', { active: activeExamType === tab.value }]"
+        @click="switchExamType(tab.value)"
+      >
+        <text>{{ tab.label }}</text>
+      </view>
+    </scroll-view>
 
-    <!-- Results -->
-    <scroll-view v-else scroll-y class="results" @scrolltolower="loadMore">
-      <view v-for="item in results" :key="item.userId" class="match-card card" @click="goDetail(item.userId)">
-        <view class="flex-between">
-          <view class="flex gap-16">
-            <image :src="item.avatar || '/static/default-avatar.png'" class="avatar" mode="aspectFill" />
-            <view>
-              <text class="text-bold">{{ item.nickname }}</text>
-              <text class="text-sm text-secondary mt-4">{{ item.country || '' }} · {{ item.timezone || '' }}</text>
-              <view class="flex gap-8 mt-8">
-                <text class="tag" v-if="item.exam">{{ item.exam.name }}</text>
-                <text class="tag tag-success" v-if="item.userExam?.targetOrg">{{ item.userExam.targetOrg }}</text>
-                <text class="tag tag-warning" v-if="item.userExam?.dailyHours">{{ item.userExam.dailyHours }}h/d</text>
-              </view>
-              <view class="flex gap-8 mt-4" v-if="item.languages">
-                <text class="text-xs text-hint" v-for="l in item.languages.slice(0,3)" :key="l">{{ l }}</text>
-              </view>
-            </view>
+    <!-- Card Waterfall -->
+    <scroll-view
+      scroll-y
+      class="card-list"
+      @scrolltolower="loadMore"
+      :refresher-enabled="true"
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+    >
+      <view v-if="users.length > 0" class="card-grid">
+        <view
+          v-for="user in users"
+          :key="user.id"
+          class="match-card"
+        >
+          <view class="card-avatar" @click="goDetail(user.id)">
+            <image :src="user.avatar || '/static/default-avatar.png'" mode="aspectFill" />
           </view>
-          <view class="text-right" v-if="item.matchScore">
-            <text class="text-primary text-xl text-bold">{{ Math.round(item.matchScore * 100) }}%</text>
-            <text class="text-hint text-sm">{{ $t('match.matchScore') }}</text>
+          <view class="card-info" @click="goDetail(user.id)">
+            <text class="card-name">{{ user.nickname }}</text>
+            <text class="card-exam" v-if="user.examName">📚 {{ user.examName }}</text>
+            <text class="card-school" v-if="user.targetSchool">🏫 {{ user.targetSchool }}</text>
+            <text class="card-tz" v-if="user.timezone">🌍 {{ user.timezone }}</text>
+          </view>
+          <view class="card-action">
+            <button class="greet-btn" :disabled="greeting === user.id" @click="onGreet(user)">
+              {{ greeting === user.id ? '...' : $t('match.greet') }}
+            </button>
           </view>
         </view>
-        <view class="flex mt-16 gap-8" v-if="!item.matchScore">
-          <button class="btn btn-primary btn-sm flex-1" @click.stop="sendRequest(item.userId, item.exam?.id)">
-            {{ $t('match.sendRequest') }}
-          </button>
-        </view>
       </view>
 
+      <Empty v-if="!loading && users.length === 0 && !isLoggedIn" :text="$t('home.welcomeTitle')" />
 
-      <view class="text-center py-16 text-hint" v-if="loading && results.length > 0">
-        {{ $t('common.loading') }}...
+      <view v-if="loadingMore" class="loading-more">
+        <text class="text-hint text-sm">{{ $t('common.loading') }}...</text>
       </view>
-      <Empty v-if="!loading && results.length === 0 && isVerified" :text="$t('match.noResults')" />
+
+      <view v-if="!hasMore && users.length > 0" class="no-more">
+        <text class="text-hint text-sm">— {{ $t('common.noData') }} —</text>
+      </view>
     </scroll-view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '../../store/user';
-import { userApi, matchApi } from '../../api';
+import { matchApi } from '../../api';
 
 const { t } = useI18n();
 const userStore = useUserStore();
-const { isVerified } = userStore;
+const { isLoggedIn } = userStore;
 
-const mode = ref<'recommend' | 'search'>('recommend');
-const results = ref<any[]>([]);
+const keyword = ref('');
+const activeExamType = ref('');
+const users = ref<any[]>([]);
+const page = ref(1);
+const hasMore = ref(true);
 const loading = ref(false);
-const myExams = ref<any[]>([]);
-const selectedExamIndex = ref(-1);
+const loadingMore = ref(false);
+const refreshing = ref(false);
+const greeting = ref('');
 
-const countryOptions = ['All', 'China', 'Japan', 'South Korea', 'United States', 'United Kingdom', 'India', 'Singapore'];
-const countryIndex = ref(0);
-const timeOptions = ['All', 'Morning', 'Afternoon', 'Evening', 'Night'];
-const timeIndex = ref(0);
+const examTabs = [
+  { value: '', label: t('common.all') || 'All' },
+  { value: 'postgraduate', label: '🎓 ' + t('exam.postgraduate') },
+  { value: 'certificate', label: '📜 ' + t('exam.certificate') },
+  { value: 'language', label: '🏆 ' + t('exam.proficiency') },
+  { value: 'other', label: 'Other' },
+];
 
-const myExamLabels = computed(() => myExams.value.map((e: any) => e.exam?.name || ''));
-const selectedExamLabel = computed(() => myExamLabels.value[selectedExamIndex.value] || '');
-
-onMounted(async () => {
-  try {
-    const exams = await userApi.getMyExams();
-    myExams.value = exams as any[];
-    if (myExams.value.length > 0) {
-      selectedExamIndex.value = 0;
-      loadResults();
-    }
-  } catch { /* */ }
+onMounted(() => {
+  fetchUsers();
 });
 
-function loadResults() {
-  if (selectedExamIndex.value < 0) return;
+async function fetchUsers(reset = false) {
+  if (loading.value) return;
+  if (reset) {
+    page.value = 1;
+    hasMore.value = true;
+    refreshing.value = true;
+  }
   loading.value = true;
-  const examId = myExams.value[selectedExamIndex.value]?.examId;
 
-  const fetcher = mode.value === 'recommend'
-    ? matchApi.recommend(examId)
-    : matchApi.search({ examId });
-
-  fetcher.then((data: any) => {
-    results.value = data?.data || [];
-  }).finally(() => { loading.value = false; });
-}
-
-function loadMore() { /* Pagination TODO */ }
-
-function onExamChange(e: any) {
-  selectedExamIndex.value = e.detail.value;
-  loadResults();
-}
-function onCountryChange(e: any) { countryIndex.value = e.detail.value; loadResults(); }
-function onTimeChange(e: any) { timeIndex.value = e.detail.value; loadResults(); }
-
-async function sendRequest(targetId: string, examId: string) {
   try {
-    await matchApi.sendRequest({
-      targetId,
-      examId,
-      message: '',
-    });
-    uni.showToast({ title: t('match.requestSent'), icon: 'success' });
-  } catch (err: any) {
-    uni.showToast({ title: err.message, icon: 'none' });
+    const params: any = { page: reset ? 1 : page.value, limit: 20 };
+    if (activeExamType.value) params.examType = activeExamType.value;
+    if (keyword.value) params.keyword = keyword.value;
+
+    const result: any = await matchApi.search(params);
+    const data = result?.data || [];
+    const pagination = result?.pagination;
+
+    if (reset) {
+      users.value = data;
+    } else {
+      users.value = [...users.value, ...data];
+    }
+
+    if (pagination) {
+      hasMore.value = pagination.page < pagination.totalPages;
+    }
+  } catch {
+    // silent
+  } finally {
+    loading.value = false;
+    loadingMore.value = false;
+    refreshing.value = false;
   }
 }
 
-function goDetail(id: string) { uni.navigateTo({ url: `/pages/match/detail?id=${id}` }); }
-function goVerify() { uni.navigateTo({ url: '/pages/verify/verify' }); }
+function switchExamType(type: string) {
+  activeExamType.value = type;
+  fetchUsers(true);
+}
+
+function onSearch() {
+  fetchUsers(true);
+}
+
+function onRefresh() {
+  fetchUsers(true);
+}
+
+function loadMore() {
+  if (!hasMore.value || loadingMore.value) return;
+  loadingMore.value = true;
+  page.value++;
+  fetchUsers(false);
+}
+
+async function onGreet(user: any) {
+  if (greeting.value) return;
+  if (!isLoggedIn.value) {
+    uni.navigateTo({ url: '/pages/auth/auth' });
+    return;
+  }
+
+  uni.showModal({
+    title: `${t('match.sendRequest')}?`,
+    content: `Send a greeting to ${user.nickname}?`,
+    success: async (res) => {
+      if (!res.confirm) return;
+      greeting.value = user.id;
+      try {
+        await matchApi.greet(user.id);
+        uni.showToast({ title: t('match.requestSent'), icon: 'success' });
+      } catch (err: any) {
+        uni.showToast({ title: err.message || t('common.error'), icon: 'none' });
+      } finally {
+        greeting.value = '';
+      }
+    },
+  });
+}
+
+function goDetail(id: string) {
+  uni.navigateTo({ url: `/pages/match/detail?id=${id}` });
+}
 </script>
 
 <style lang="scss" scoped>
-.page { display: flex; flex-direction: column; height: 100vh; }
-.filter-bar { display: flex; gap: 12rpx; padding: 16rpx 24rpx; background: #fff; }
-.filter-chip { display: flex; align-items: center; gap: 6rpx; padding: 10rpx 20rpx; background: #F5F5F5; border-radius: 20rpx; font-size: 24rpx; color: #666; }
-.mode-tabs { display: flex; padding: 16rpx 32rpx; background: #fff; }
-.mode-tab { padding: 12rpx 24rpx; font-size: 28rpx; color: #999; border-radius: 20rpx; }
-.mode-tab.active { background: #4A90D9; color: #fff; }
-.results { flex: 1; padding: 16rpx 32rpx; }
-.match-card { margin: 0 0 16rpx 0; }
-.verify-required { display: flex; flex-direction: column; align-items: center; padding: 80rpx 64rpx; }
-.text-xs { font-size: 20rpx; }
+.page { display: flex; flex-direction: column; height: 100vh; background: #F5F5F5; }
+.search-bar { padding: 16rpx 24rpx; background: #fff; }
+.search-input {
+  display: flex; align-items: center;
+  background: #F5F5F5; border-radius: 40rpx; padding: 16rpx 24rpx;
+}
+.search-icon { font-size: 28rpx; margin-right: 8rpx; }
+.search-field { flex: 1; font-size: 28rpx; }
+.exam-tabs {
+  white-space: nowrap; padding: 16rpx 24rpx; background: #fff;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+.exam-tab {
+  display: inline-block; padding: 12rpx 20rpx; margin-right: 12rpx;
+  border-radius: 40rpx; font-size: 26rpx; color: #666; background: #F5F5F5;
+}
+.exam-tab.active { color: #fff; background: #4A90D9; }
+.card-list { flex: 1; padding: 16rpx 24rpx; }
+.card-grid { display: flex; flex-direction: column; gap: 16rpx; }
+.match-card {
+  display: flex; align-items: center; gap: 16rpx;
+  background: #fff; border-radius: 16rpx; padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.card-avatar {
+  width: 80rpx; height: 80rpx; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+}
+.card-avatar image { width: 100%; height: 100%; }
+.card-info { flex: 1; min-width: 0; }
+.card-name { font-size: 30rpx; font-weight: 600; display: block; }
+.card-exam, .card-school, .card-tz { font-size: 24rpx; color: #888; display: block; margin-top: 4rpx; }
+.card-action { flex-shrink: 0; }
+.greet-btn {
+  padding: 12rpx 24rpx; background: #4A90D9; color: #fff;
+  border-radius: 40rpx; font-size: 24rpx; border: none;
+}
+.greet-btn::after { border: none; }
+.greet-btn[disabled] { background: #B0C4DE; }
+.loading-more, .no-more { padding: 24rpx; text-align: center; }
 </style>

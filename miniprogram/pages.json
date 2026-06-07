@@ -21,28 +21,10 @@
       }
     },
     {
-      "path": "pages/verify/verify",
-      "style": {
-        "navigationBarTitleText": "Real-name Verification"
-      }
-    },
-    {
-      "path": "pages/profile/profile",
-      "style": {
-        "navigationBarTitleText": "Profile",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/exam/exam",
-      "style": {
-        "navigationBarTitleText": "Select Exam"
-      }
-    },
-    {
       "path": "pages/match/match",
       "style": {
-        "navigationBarTitleText": "Find Buddy"
+        "navigationBarTitleText": "Find Buddy",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -64,6 +46,25 @@
       }
     },
     {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "Profile",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/verify/verify",
+      "style": {
+        "navigationBarTitleText": "Real-name Verification"
+      }
+    },
+    {
+      "path": "pages/exam/exam",
+      "style": {
+        "navigationBarTitleText": "Select Exam"
+      }
+    },
+    {
       "path": "pages/settings/settings",
       "style": {
         "navigationBarTitleText": "Settings"
@@ -82,12 +83,6 @@
     "borderStyle": "black",
     "backgroundColor": "#FFFFFF",
     "list": [
-      {
-        "pagePath": "pages/index/index",
-        "iconPath": "static/icons/home.png",
-        "selectedIconPath": "static/icons/home-active.png",
-        "text": "Home"
-      },
       {
         "pagePath": "pages/match/match",
         "iconPath": "static/icons/search.png",

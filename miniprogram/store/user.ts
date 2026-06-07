@@ -57,14 +57,8 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function login(credentials: { type: string; email?: string; phone?: string; password: string }) {
+  async function login(credentials: { phone: string; code: string; nickname?: string }) {
     const result: any = await authApi.login(credentials);
-    setAuth(result);
-    return result;
-  }
-
-  async function register(data: any) {
-    const result: any = await authApi.register(data);
     setAuth(result);
     return result;
   }
@@ -92,7 +86,7 @@ export const useUserStore = defineStore('user', () => {
   return {
     user, isLoggedIn, token, settings,
     isVerified, userId,
-    login, register, logout, setAuth, clearAuth,
+    login, logout, setAuth, clearAuth,
     restoreSession, updateSettings,
     connectSocket, disconnectSocket,
   };

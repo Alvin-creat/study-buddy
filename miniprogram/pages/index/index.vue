@@ -129,6 +129,9 @@ const categories = computed(() => [
 ]);
 
 onMounted(async () => {
+  // Redirect to match tab for MVP
+  uni.switchTab({ url: '/pages/match/match' });
+  return;
   try {
     const [hExams] = await Promise.all([
       examApi.getHotExams(),

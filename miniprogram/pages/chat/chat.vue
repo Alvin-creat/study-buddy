@@ -34,6 +34,14 @@
         />
         <view :class="['message-bubble', msg.senderId === userId ? 'bubble-mine' : 'bubble-other']">
           <text class="message-text">{{ msg.content }}</text>
+          <view
+            v-if="msg.senderId !== userId && !msg.contentTranslated"
+            class="translate-btn"
+            :class="{ 'translate-loading': translating === msg.id }"
+            @click="translateMsg(msg)"
+          >
+            <text>🌐 {{ translating === msg.id ? '...' : $t('chat.translate') }}</text>
+          </view>
           <text class="message-translated" v-if="msg.contentTranslated">
             🌐 {{ msg.contentTranslated }}
           </text>
@@ -86,6 +94,7 @@ const scrollTop = ref(0);
 const hasMore = ref(true);
 const showActions = ref(false);
 const loading = ref(false);
+const translating = ref('');
 
 onMounted(() => {
   const pages = getCurrentPages();
@@ -186,6 +195,19 @@ function formatTime(dateStr: string) {
   return d.format('MM-DD HH:mm');
 }
 
+async function translateMsg(msg: any) {
+  if (translating.value) return;
+  translating.value = msg.id;
+  try {
+    const result: any = await chatApi.translate(buddyshipId.value, msg.id);
+    msg.contentTranslated = result?.translated || result;
+  } catch {
+    // silently fail
+  } finally {
+    translating.value = '';
+  }
+}
+
 function goBack() { uni.navigateBack(); }
 </script>
 
@@ -202,6 +224,10 @@ function goBack() { uni.navigateBack(); }
 .bubble-mine { background: #4A90D9; color: #fff; border-bottom-right-radius: 4rpx; }
 .bubble-other { background: #fff; border-bottom-left-radius: 4rpx; }
 .message-text { font-size: 28rpx; line-height: 1.5; word-break: break-word; }
+.translate-btn { margin-top: 6rpx; cursor: pointer; }
+.translate-btn text { font-size: 22rpx; color: rgba(255,255,255,0.7); }
+.translate-loading text { opacity: 0.5; }
+.bubble-other .translate-btn text { color: #4A90D9; }
 .message-translated { font-size: 24rpx; opacity: 0.7; margin-top: 8rpx; display: block; font-style: italic; }
 .message-time { margin-top: 4rpx; }
 .input-bar { background: #fff; border-top: 1rpx solid #E8E8E8; }

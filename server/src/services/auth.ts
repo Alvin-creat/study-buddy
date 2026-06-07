@@ -1,90 +1,91 @@
 import { PrismaClient } from '@prisma/client';
-import { hashPassword, comparePassword } from '../utils/hash';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../middleware/errorHandler';
+import { setVerificationCode, verifyCode, checkSendLimit, recordSendAttempt } from '../utils/redis';
 import type { JwtPayload } from '../types';
 
 const prisma = new PrismaClient();
 
-interface RegisterInput {
-  type: 'email' | 'phone';
-  email?: string;
-  phone?: string;
-  phoneCode?: string;
-  password: string;
-  nickname: string;
-  country?: string;
-  timezone?: string;
-  language?: string;
-}
-
-interface LoginInput {
-  type: 'email' | 'phone';
-  email?: string;
-  phone?: string;
-  phoneCode?: string;
-  password: string;
-}
+// ─── Token Helpers ─────────────────────────
 
 function generateTokens(payload: JwtPayload) {
   return {
     accessToken: signAccessToken(payload),
     refreshToken: signRefreshToken(payload),
-    expiresIn: 900, // 15 minutes in seconds
+    expiresIn: 900,
   };
 }
 
-export async function register(input: RegisterInput) {
-  const existing = input.type === 'email'
-    ? await prisma.user.findUnique({ where: { email: input.email } })
-    : await prisma.user.findUnique({ where: { phone: input.phone } });
+// ─── Send Verification Code ────────────────
 
-  if (existing) {
-    throw new AppError(409, 20001, 'Account already exists');
+interface SendCodeInput {
+  phone: string;
+}
+
+export async function sendVerificationCode(input: SendCodeInput) {
+  const phone = input.phone;
+
+  // Rate limit check
+  const limit = await checkSendLimit(phone);
+  if (!limit.allowed) {
+    throw new AppError(429, 42901, limit.reason || 'Rate limited');
   }
 
-  const passwordHash = await hashPassword(input.password);
+  // Generate 6-digit code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  const user = await prisma.user.create({
-    data: {
-      email: input.email || null,
-      phone: input.phone || null,
-      phoneCode: input.phoneCode || null,
-      passwordHash,
-      nickname: input.nickname,
-      country: input.country || null,
-      timezone: input.timezone || 'UTC',
-      languages: input.language ? [input.language] : [],
-    },
-    select: {
-      id: true, nickname: true, avatar: true, email: true, phone: true,
-      country: true, timezone: true, verifyStatus: true, createdAt: true,
-    },
-  });
+  // Store in Redis (5min TTL)
+  await setVerificationCode(phone, code);
 
-  const tokens = generateTokens({ userId: user.id, role: 'USER' });
+  // Record attempt for rate limiting
+  await recordSendAttempt(phone);
 
-  return { user, ...tokens };
+  // In production: send SMS via provider (Twilio / Aliyun SMS)
+  // For dev: log the code
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[DEV] Verification code for ${phone}: ${code}`);
+  }
+
+  return { phone, masked: phone.slice(0, 3) + '****' + phone.slice(-3) };
+}
+
+// ─── Login / Auto-Register ─────────────────
+
+interface LoginInput {
+  phone: string;
+  code: string;
+  nickname?: string;
+  timezone?: string;
+  language?: string;
 }
 
 export async function login(input: LoginInput) {
-  const user = input.type === 'email'
-    ? await prisma.user.findUnique({ where: { email: input.email } })
-    : await prisma.user.findUnique({ where: { phone: input.phone } });
+  const { phone, code, nickname, timezone, language } = input;
 
-  if (!user) {
-    throw new AppError(401, 20002, 'Invalid credentials');
+  // Verify the code
+  const valid = await verifyCode(phone, code);
+  if (!valid) {
+    throw new AppError(401, 40101, 'Invalid or expired verification code');
   }
 
-  if (user.isBanned) {
+  // Find or create user
+  let user = await prisma.user.findUnique({ where: { phone } });
+
+  if (!user) {
+    // Auto-register
+    user = await prisma.user.create({
+      data: {
+        phone,
+        nickname: nickname || `User-${phone.slice(-4)}`,
+        timezone: timezone || 'UTC',
+        languages: language ? [language] : [],
+      },
+    });
+  } else if (user.isBanned) {
     throw new AppError(403, 10006, 'Account is banned');
   }
 
-  const valid = await comparePassword(input.password, user.passwordHash);
-  if (!valid) {
-    throw new AppError(401, 20002, 'Invalid credentials');
-  }
-
+  // Update last login
   await prisma.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
@@ -97,15 +98,22 @@ export async function login(input: LoginInput) {
       id: user.id,
       nickname: user.nickname,
       avatar: user.avatar,
-      email: user.email,
       phone: user.phone,
       country: user.country,
       timezone: user.timezone,
       verifyStatus: user.verifyStatus,
+      examType: user.examType,
+      examName: user.examName,
+      targetSchool: user.targetSchool,
+      studyTime: user.studyTime,
+      languages: user.languages,
+      bio: user.bio,
     },
     ...tokens,
   };
 }
+
+// ─── Refresh Tokens ────────────────────────
 
 export async function refreshTokens(token: string) {
   try {
@@ -125,17 +133,4 @@ export async function refreshTokens(token: string) {
     if (err instanceof AppError) throw err;
     throw new AppError(401, 10002, 'Invalid refresh token');
   }
-}
-
-export async function sendVerificationCode(input: {
-  type: 'email' | 'phone';
-  email?: string;
-  phone?: string;
-  phoneCode?: string;
-}) {
-  // In production: generate code, store in Redis with TTL, send via SMS/email provider
-  // For now, log the code
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log(`[DEV] Verification code for ${input.email || input.phone}: ${code}`);
-  return true;
 }

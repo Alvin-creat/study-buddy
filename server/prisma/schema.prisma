@@ -62,12 +62,16 @@ model User {
   email         String?      @unique @db.VarChar(255)
   phone         String?      @unique @db.VarChar(20)
   phoneCode     String?      @db.VarChar(5)
-  passwordHash  String       @db.VarChar(255)
+  passwordHash  String?      @db.VarChar(255)
   gender        Gender?
   birthday      DateTime?
   country       String?      @db.VarChar(100)
   region        String?      @db.VarChar(100)
   timezone      String       @default("UTC") @db.VarChar(50)
+  examType      String?      @db.VarChar(50)
+  examName      String?      @db.VarChar(100)
+  targetSchool  String?      @db.VarChar(100)
+  studyTime     String?      @db.VarChar(50)
   languages     String[]     @default([])
   bio           String?      @db.VarChar(500)
 
@@ -192,15 +196,15 @@ model BuddyRequest {
   requester   User          @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
   targetId    String
   target      User          @relation("Target", fields: [targetId], references: [id], onDelete: Cascade)
-  examId      String
-  exam        Exam          @relation(fields: [examId], references: [id])
+  examId      String?
+  exam        Exam?          @relation(fields: [examId], references: [id], onDelete: SetNull)
   message     String?       @db.VarChar(500)
   status      RequestStatus @default(PENDING)
   respondedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  @@unique([requesterId, targetId, examId])
+  @@index([requesterId, targetId])
   @@index([targetId, status])
   @@index([requesterId])
   @@map("buddy_requests")

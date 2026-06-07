@@ -57,6 +57,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
       select: {
         id: true, nickname: true, avatar: true, gender: true, bio: true,
         country: true, region: true, timezone: true, languages: true,
+        examType: true, examName: true, targetSchool: true, studyTime: true,
         privacySettings: true, updatedAt: true,
       },
     });
